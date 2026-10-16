@@ -1,7 +1,7 @@
 # Schema 速查（MVP）
 
 與 [ARCHITECTURE.md](./ARCHITECTURE.md) 一致。類型以 Postgres 為準。  
-2026-10-16 更新：報價維度（A）、來源標示（B）、包裝父子 SKU（C）、容量分頁（D／family_id）。
+2026-10-16 更新：A 維度、B 來源、C 包裝、D 容量分頁、E 標準單位價換算。
 
 ## communities
 
@@ -22,17 +22,18 @@
 | family_id | uuid NULL | 同系列不同容量共用 |
 | sku_code | text | 社區內 UNIQUE |
 | name_zh | text | 含容量，例如「可口可樂 330ml」 |
-| capacity_value | numeric NULL | |
-| capacity_unit | text NULL | ml \| L \| g \| kg |
-| normalized_capacity | numeric NULL | 後端正規化至 ml 或 g |
-| unit_label | text | 基準單位（件） |
+| capacity_value | numeric NULL | 輸入值 |
+| capacity_unit | text NULL | ml \| L \| g \| kg（輸入） |
+| normalized_capacity | numeric NULL | **後端最細單位**：液體 ml、重量 g |
+| measure_type | text NULL | liquid \| solid \| count \| length |
+| unit_label | text | 基準單位（件／張／卷等） |
 | unit_qty_base | numeric | 預設 1 |
 | is_active | boolean | |
 | sort_order | int | |
 | created_at | timestamptz | |
 
-標準單位價（每 100ml／100g）由報價 `unit_price_effective` + `normalized_capacity` 計算，可不存欄。  
-不同容量 = 不同頁；同容量包裝 = `product_variants`。
+標準單位價：`standard_unit_price = (sale_price / normalized_capacity) × display_multiplier`；**前端計算展示**，可不存欄。上線：liquid×100（每100ml）、solid×100（每100g）。  
+勿跨 g／ml 自動換算或排名。不同容量 = 不同頁；同容量包裝 = `product_variants`。
 
 ## product_variants（同容量包裝子 SKU）
 
@@ -181,3 +182,4 @@
 - product／variant 1 → N ccs_prices（可選）
 - **比價只在同一 packaging_type 內**；勿混 single 與 case 折合價
 - **不同容量勿混同一頁 Tabs**；跨容量僅 family_id＋稍後推薦卡
+- 標準單位價見 ARCHITECTURE §2.15；後端只存 normalized_capacity

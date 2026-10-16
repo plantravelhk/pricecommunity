@@ -11,7 +11,8 @@
 - [ ] Schema 含 product_variants + quotes 維度欄位（district/sub_district/shop_type/packaging_type/price_type/reported_at/source_type）
 - [ ] 上線來源 UI：綠 CCS + 橙／黃街坊證實 chip＋固定文案（藍／紫稍後）
 - [ ] 產品頁 Tabs：單件裝／排裝／整箱；multipack 總價+件數→自動單位價；禁止跨包裝混比
-- [ ] 容量：每容量獨立產品頁；欄位 capacity_value/unit、normalized_capacity、family_id；顯示標準單位價（每100ml／100g）
+- [ ] 容量：每容量獨立產品頁；欄位 capacity_value/unit、normalized_capacity、measure_type、family_id
+- [ ] 標準單位價 UI：後端存最細單位（ml／g）；前端算 (售價/normalized)×multiplier；主價正常字＋灰色小字 helper；上線僅 liquid 每100ml＋solid 每100g
 - [ ] 篩選：shop_type + packaging_type；上線優先連鎖超市＋街坊藥房
 - [ ] 預設有效窗：超市~7日；藥房／臨期 24–48h
 - [ ] CCS 格價資訊通資料匯入與產品對應
@@ -31,6 +32,7 @@
 - [ ] 可選 GPS lat/lng；其餘 shop_type／price_type 全面啟用
 - [ ] 包裝智能提示（簡單規則）：「6罐裝折合更平」／「單買其實更平」（資料穩後）
 - [ ] 「相關容量推薦」卡片（同 family_id；標示最平；簡單規則）
+- [ ] 標準單位價：count／length、大包每1kg 顯示
 
 ## 刻意不做（MVP / 上線日）
 
@@ -41,3 +43,4 @@
 - [ ] ~~自訂網域~~（除非用戶另指示）
 - [ ] ~~跨 packaging 直接比價（整箱折合 vs 單件混排）~~
 - [ ] ~~不同容量塞進同一產品頁 Tabs~~
+- [ ] ~~跨物理量綱（g vs ml）自動換算／排名~~

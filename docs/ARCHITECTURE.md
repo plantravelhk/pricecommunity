@@ -48,10 +48,11 @@ action_log ── 全表審計
 | family_id | uuid NULL | 同品牌／同系列不同容量共用；上線建議填 |
 | sku_code | text | 內部代號（**單一容量**一列） |
 | name_zh | text | 例如「可口可樂 330ml」— **每容量獨立產品頁** |
-| capacity_value | numeric NULL | 容量數值，例如 330、1.25 |
-| capacity_unit | text NULL | `ml` \| `L` \| `g` \| `kg` |
-| normalized_capacity | numeric NULL | 後端正規化至最小單位（ml 或 g） |
-| unit_label | text | 基準單位標籤，例如「罐」 |
+| capacity_value | numeric NULL | 輸入容量／重量數值，例如 330、1.25 |
+| capacity_unit | text NULL | 輸入單位：`ml` \| `L` \| `g` \| `kg`（及稍後 count／length 用件、米等） |
+| normalized_capacity | numeric NULL | **後端一律存最細單位**（液體→ml、重量→g），避免精度問題 |
+| measure_type | text NULL | `liquid` \| `solid` \| `count` \| `length`；決定標準單位價展示 |
+| unit_label | text | 基準單位標籤，例如「罐」「張」「卷」 |
 | unit_qty_base | numeric | 基準數量（計算單位價用），預設 1 |
 | is_active | bool | 下架則不可新報價 |
 | sort_order | int | |
@@ -248,11 +249,49 @@ CCS 作**顯示參考**，不自動覆寫用戶 `quotes`。
 |------|------|
 | 頁面 | 每容量一頁；頁內顯示**售價** + **標準單位價**（每 100ml 或每 100g） |
 | 關聯 | 後端用 `family_id` 連結同一產品線；上線先有欄位即可 |
-| 標準單位價 | 由 `unit_price_effective`（每件）與 `normalized_capacity` 換算，例如每 100ml = `unit_price_effective / normalized_capacity * 100`（單位為 ml 時） |
-| 上線範圍 | 只做：**標準單位價顯示** + `family_id` 欄位 |
+| 標準單位價 | 見 §2.15；公式 `(售價 / normalized_capacity) × display_multiplier` |
+| 上線範圍 | **標準單位價顯示**（僅液體每100ml + 固體每100g）+ `family_id` + 後端存 `normalized_capacity` |
 | 稍後可選 | 「相關容量推薦」卡片：列出同 `family_id` 其他容量的標準單位價、標示邊個最平；**簡單規則**，不做複雜 matching |
 | 與捆綁共存 | **同容量** multipack／case → 子包裝 **Tabs**（§2.13）；**不同容量** → **分頁** + `family_id`。兩者可並存 |
 | 核心規則 | 與來源標示／投票／聲譽／過期**平行**，不改核心規則 |
+
+### 2.15 標準單位價顯示／換算（精簡版）— 2026-10-16 定案
+
+與 multipack Tabs、容量分頁、來源標示、投票／聲譽／過期**平行**，不改核心規則。
+
+#### 後端儲存
+
+- **一律**將容量／重量正規化為最細單位寫入 `normalized_capacity`：液體 → **ml**；重量 → **g**（由 `capacity_value` + `capacity_unit` 換算，例如 1.25 L → 1250 ml；2 kg → 2000 g）。
+- 目的：避免浮點／單位混用精度問題；前端只讀 `normalized_capacity` + `measure_type` 做展示換算。
+- 報價「售價」用該包裝下的有效單件價（通常即 `unit_price_effective`；與折扣公式銜接後的每件價）。
+
+#### 前端展示（依產品類型）
+
+| measure_type | 標準單位價標示 | display_multiplier | 備註 |
+|--------------|----------------|--------------------|------|
+| `liquid` | 每 **100ml** | 100 | **上線必做** |
+| `solid`（重量） | 每 **100g** | 100 | **上線必做**；大包米／寵物糧等稍後可改每 **1kg**（multiplier=1000） |
+| `count` | 每 **1** 件／張／卷 | 1 | 稍後 |
+| `length` | 每 **1** 米 | 1 | 稍後 |
+
+**公式**：
+
+`standard_unit_price = (sale_price / normalized_capacity) × display_multiplier`
+
+例：售價 $6.5、normalized_capacity=330（ml）、liquid → `(6.5/330)×100 ≈ $1.97／100ml`。
+
+#### UI
+
+- **主價**（售價／有效單位價）：正常字級、最醒目。
+- **標準單位價**：較小、灰色 helper 文案（例如「約 $1.97／100ml」）。
+- **禁止**自動換算或排序去比較**不同物理量綱**（例如 g vs ml）。
+- 同 `family_id`、不同容量／單位：各頁各自顯示自己的標準單位價；不做跨量綱排名。
+
+#### 上線範圍
+
+- 只做：`liquid` 每 100ml + `solid` 每 100g。
+- 後端存 `normalized_capacity`；**前端計算**展示用標準單位價（可不落 DB 欄）。
+- `count`／`length`、每 1kg 大包顯示 → 稍後。
 
 ## 3. 有效單位價公式
 
@@ -358,7 +397,7 @@ CCS（`ccs_official`）可用綠色 chip 置於「官方參考」或同一 Tab �
 
 ## 6. 前端顯示優先級
 
-產品詳情：**一容量一頁**。頁內 **Tabs** 僅用於同容量包裝（單件裝／排裝／整箱）— 每 Tab 只顯示該 `packaging_type` 的報價。頁上同時顯示標準單位價（每 100ml／100g）。篩選：`shop_type`、`packaging_type`（上線必做）。「相關容量推薦」卡片**不上線日必做**。
+產品詳情：**一容量一頁**。頁內 **Tabs** 僅用於同容量包裝（單件裝／排裝／整箱）— 每 Tab 只顯示該 `packaging_type` 的報價。頁上：主價正常字；標準單位價較小灰色 helper（上線：液體每100ml／固體每100g；見 §2.15）。篩選：`shop_type`、`packaging_type`（上線必做）。「相關容量推薦」卡片**不上線日必做**。
 
 每則報價卡片／列：
 
@@ -405,6 +444,8 @@ Phase 1 程式碼尚未實作；實作時仍屬「輔助」，手動填表報價
 - 跨 packaging 直接比價（整箱折合 vs 單件混排）
 - 把不同容量塞進同一產品頁 Tabs（容量必須分頁；family_id 只做關聯／稍後推薦）
 - 上線日複雜跨容量 matching／推薦引擎
+- 自動跨物理量綱換算或排名（g vs ml 等）
+- 上線日 count／length 標準單位價、大包每1kg（欄位可先留）
 - 上線日藍（爬蟲網店）／紫紅（商戶）來源標示（欄位可先有，UI 稍後開）
 
 ## 9. 設定常數（建議集中 config）
@@ -419,7 +460,10 @@ VALIDITY_DAYS_SUPERMARKET=7
 VALIDITY_HOURS_PHARMACY_OR_NEAR_EXPIRY=24..48
 LAUNCH_SOURCE_TYPES=ccs_official,community_verified
 LAUNCH_SHOP_TYPES=chain_supermarket,local_pharmacy
-STANDARD_UNIT_BASIS=100  # per 100ml or 100g display
+STANDARD_UNIT_BASIS=100  # liquid/solid launch display_multiplier
+NORMALIZE_LIQUID_TO=ml
+NORMALIZE_SOLID_TO=g
+LAUNCH_MEASURE_TYPES=liquid,solid
 ```
 
 ---

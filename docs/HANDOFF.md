@@ -19,7 +19,8 @@
 | 報價維度（A） | ✅ 2026-10-16：district/sub_district、shop_type、packaging/price_type、reported_at；與核心規則平行 |
 | 來源標示（B） | ✅ 2026-10-16：source_type 四色文案；上線綠+橙／黃 |
 | 包裝捆綁（C） | ✅ 2026-10-16：同容量 product_variants；Tabs 分包裝；禁止整箱折合 vs 單件混比 |
-| 容量分頁（D） | ✅ 2026-10-16：不同容量=獨立產品頁 + family_id；標準單位價；推薦卡稍後 |
+| 容量分頁（D） | ✅ 2026-10-16：不同容量=獨立產品頁 + family_id；推薦卡稍後 |
+| 標準單位價（E） | ✅ 2026-10-16：normalized 存 ml／g；前端 (售價/norm)×multiplier；上線 100ml／100g；主價+灰字 |
 | 應用程式碼 | ❌ 無 |
 | 資料庫 / Schema SQL | ❌ 未建 |
 | Netlify site | ❌ 未建立 |
@@ -32,12 +33,13 @@
 
 **AI 輔助路線（2026-10-16 用戶定案）**：核心永遠是純規則 + 投票 + 聲譽。Phase 1（上線日**可選**輔助，非核心路徑）= 前端本機 Tesseract.js OCR（點「影相報價」才 lazy-load；填欄後必須用戶確認才提交）。Phase 2／3 刻意延後以控成本、等有足夠資料再說。詳見 `docs/ARCHITECTURE.md`「輔助能力路線」。
 
-**報價維度／來源／包裝／容量（2026-10-16 用戶定案 A+B+C+D）**：
+**報價維度／來源／包裝／容量／標準單位價（2026-10-16 用戶定案 A+B+C+D+E）**：
 - **A** 空間（18區+商圈）、shop_type、packaging_type／price_type、reported_at；預設有效窗超市~7日、藥房／臨期24–48h；篩選先 shop_type+packaging；可選 GPS 稍後。
 - **B** 每則 `source_type`＋色塊固定文案；上線只綠（CCS）+橙／黃（街坊證實）；藍／紫稍後。
 - **C** 同容量 `product_variants`；報價存總價、後端算單位價；產品頁 Tabs 單件／排裝／整箱；**永不**跨包裝直接比價；智能提示稍後。
-- **D** 不同容量 = **獨立產品頁** + `family_id`；顯示標準單位價（每100ml／100g）；「相關容量推薦」稍後簡單規則。與 C 共存、勿混淆。
-以上與投票／聲譽／過期**平行**，不改核心規則。詳見 ARCHITECTURE §2.11–2.14 與 SCHEMA。
+- **D** 不同容量 = **獨立產品頁** + `family_id`；「相關容量推薦」稍後。與 C 共存、勿混淆。
+- **E** 後端 `normalized_capacity` 一律最細單位（ml／g）；前端 `standard_unit_price = (sale_price/normalized)×display_multiplier`；主價正常字、標準單位價灰字小字；上線僅 liquid 每100ml + solid 每100g；**禁止**跨 g／ml 自動換算或排名；同 family 各頁各自顯示。
+以上與投票／聲譽／過期**平行**，不改核心規則。詳見 ARCHITECTURE §2.11–2.15 與 SCHEMA。
 
 ---
 
@@ -56,7 +58,7 @@
 11. （可選，非核心）Phase 1 本機 OCR — MVP 核心完成後再考慮；勿自動提交
 12. product_variants + 維度／source_type 欄位落地於 SQL
 13. 上線來源 UI（綠+橙／黃）與包裝 Tabs；稍後藍／紫與智能比價提示
-14. family_id／標準單位價上線；相關容量推薦卡稍後
+14. family_id＋normalized_capacity＋上線標準單位價 UI（100ml／100g 灰字）；相關容量推薦卡稍後；count／length 稍後
 
 ---
 
@@ -66,5 +68,5 @@
 - 預設分支：`main`
 - 工作目錄：`/workspace/hkcompare/`
 - 勿擴大範圍至社交／個人主頁／強制上傳圖；上線日勿實作 Phase 2／3；Phase 1 OCR 為可選輔助且尚未開工
-- 實作時遵守 A+B+C+D：勿跨 packaging 混比；不同容量分頁（勿用 Tabs）；上線來源只綠+橙／黃；維度欄位與核心規則平行
+- 實作時遵守 A+B+C+D+E：勿跨 packaging 混比；不同容量分頁；標準單位價勿跨量綱排名；上線來源只綠+橙／黃；與核心規則平行
 - 更新本檔「目前狀態」與「開放項目」後再結束回合
