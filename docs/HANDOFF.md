@@ -24,7 +24,7 @@
 | 應用程式碼 | ❌ 無（僅 `public/index.html` noindex placeholder） |
 | 資料庫 / Schema SQL | ❌ 未建 |
 | Netlify site | ✅ 已建並改名（2026-10-16）— 見下表 |
-| 目前 URL | https://hkprice.netlify.app |
+| 目前 URL | https://pricecommunity.netlify.app |
 | 原望 URL | `hkcompare.netlify.app` **仍被佔用**（非本隊） |
 | GitHub repo | https://github.com/plantravelhk/hkcompare |
 | 品牌 / Bot 名 | 香港比較網 |
@@ -34,17 +34,17 @@
 
 | 項目 | 值 |
 |------|-----|
-| 現用名 | `hkprice` |
-| 公開 URL | https://hkprice.netlify.app |
+| 現用名 | `pricecommunity` |
+| 公開 URL | https://pricecommunity.netlify.app |
 | Site id | `a2a9c1f5-a3e3-4e6f-afbd-3606faa87862`（與改名前相同） |
 | Team | `lchbb75` |
-| 曾用名 | `hkcompare-2buz`（已改名，勿再當正式 URL） |
+| 曾用名 | `hkcompare-2buz` → `hkprice` → `comparehk`（已改名，勿再當正式 URL） |
 | 原望子網域 | `hkcompare.netlify.app` — **仍被佔用**；標題「HKCompare · 香港硬件價錢比較」（DIY 硬件），**與本專案無關** |
 | Placeholder | `public/index.html`，`noindex`；已上線 |
 | SSO / 公開存取 | SSO off（公開可開） |
 | 待辦 | 可選自訂網域；勿誤連他人 `hkcompare.netlify.app` |
 
-**本階段範圍**：仍以架構為主。已有 Netlify placeholder（hkprice）；無正式 frontend／API、無 Supabase project、無 CCS ingest、**無 OCR 程式碼**。
+**本階段範圍**：仍以架構為主。已有 Netlify placeholder（pricecommunity）；無正式 frontend／API、無 Supabase project、無 CCS ingest、**無 OCR 程式碼**。
 
 **AI 輔助路線（2026-10-16 用戶定案）**：核心永遠是純規則 + 投票 + 聲譽。Phase 1（上線日**可選**輔助，非核心路徑）= 前端本機 Tesseract.js OCR（點「影相報價」才 lazy-load；填欄後必須用戶確認才提交）。Phase 2／3 刻意延後以控成本、等有足夠資料再說。詳見 `docs/ARCHITECTURE.md`「輔助能力路線」。
 
@@ -62,7 +62,7 @@
 
 1. **選定第一個社區**（slug + name_zh）
 2. **鎖定約 30 個白名單產品**（名、單位、unit_qty_base）
-3. ~~建立 Netlify site~~ → 已改名 **`hkprice`** → https://hkprice.netlify.app（`hkcompare.netlify.app` 仍被他人硬件站佔用）
+3. ~~建立 Netlify site~~ → 已改名 **`pricecommunity`** → https://pricecommunity.netlify.app（`hkcompare.netlify.app` 仍被他人硬件站佔用）
 4. **撰寫並套用 Schema SQL**（Postgres／Supabase migration）
 5. **實作 API**（quotes、votes、expired-report、products、CCS 讀取、rate limit、聲譽規則）
 6. **實作 Frontend**（列表、報價表單、投票、有效價／需買滿 X 件、過期灰顯、ads SDK flag、來源 chip、包裝 Tabs、shop_type+packaging 篩選）
@@ -84,5 +84,5 @@
 - 工作目錄：`/workspace/hkcompare/`
 - 勿擴大範圍至社交／個人主頁／強制上傳圖；上線日勿實作 Phase 2／3；Phase 1 OCR 為可選輔助且尚未開工
 - 實作時遵守 A+B+C+D+E：勿跨 packaging 混比；不同容量分頁；標準單位價勿跨量綱排名；上線來源只綠+橙／黃；與核心規則平行
-- Netlify：正式子網域 **https://hkprice.netlify.app**（site id `a2a9c1f5-a3e3-4e6f-afbd-3606faa87862`）；**不要**當成已擁有 hkcompare.netlify.app
+- Netlify：正式子網域 **https://pricecommunity.netlify.app**（site id `a2a9c1f5-a3e3-4e6f-afbd-3606faa87862`）；**不要**當成已擁有 hkcompare.netlify.app
 - 更新本檔「目前狀態」與「開放項目」後再結束回合

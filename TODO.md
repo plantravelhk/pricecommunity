@@ -4,7 +4,7 @@
 
 - [ ] 選定第一個社區（slug、name_zh）
 - [ ] 鎖定約 30 個白名單產品（名、單位、基準量）
-- [x] 建立並改名 Netlify site：`hkprice` → https://hkprice.netlify.app （site id `a2a9c1f5-a3e3-4e6f-afbd-3606faa87862`；team `lchbb75`；曾用名 `hkcompare-2buz`）
+- [x] 建立並改名 Netlify site：`hkcompare-2buz` → `hkprice` → `comparehk` → `pricecommunity` → https://pricecommunity.netlify.app （site id `a2a9c1f5-a3e3-4e6f-afbd-3606faa87862`；team `lchbb75`）
 - [ ] （可選）日後自訂網域；`hkcompare.netlify.app` 仍被他人硬件站佔用，勿再搶
 - [ ] 撰寫 Schema SQL / migration 並套用（見 docs/SCHEMA.md）
 - [ ] 實作 API（報價、投票、過期舉報、限流、聲譽、有效單位價）

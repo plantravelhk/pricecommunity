@@ -440,7 +440,7 @@ Phase 1 程式碼尚未實作；實作時仍屬「輔助」，手動填表報價
 - 多社區並行運營（表可有，產品邏輯只開 1 個）
 - 複雜促銷引擎（只支援上表枚舉；不足時才考慮 Phase 3）
 - 實時競價、庫存、下單支付
-- 自訂網域（MVP 用 `hkcompare.netlify.app`）
+- 自訂網域（MVP 現用 `pricecommunity.netlify.app`；`hkcompare.netlify.app` 仍被他人佔用，勿當己有）
 - 跨 packaging 直接比價（整箱折合 vs 單件混排）
 - 把不同容量塞進同一產品頁 Tabs（容量必須分頁；family_id 只做關聯／稍後推薦）
 - 上線日複雜跨容量 matching／推薦引擎
