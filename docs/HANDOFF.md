@@ -19,7 +19,7 @@
 | 資料庫 / Schema SQL | ❌ 未建 |
 | Netlify site | ❌ 未建立 |
 | 計劃 URL | `https://hkcompare.netlify.app`（子網域；無自訂網域） |
-| GitHub repo | 見 README／本檔更新後的 URL |
+| GitHub repo | https://github.com/plantravelhk/hkcompare |
 | 品牌 / Bot 名 | 香港比較網 |
 | 認證帳號推送 | `plantravelhk` via `gh` |
 
