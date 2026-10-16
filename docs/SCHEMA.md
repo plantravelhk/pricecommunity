@@ -1,7 +1,7 @@
 # Schema 速查（MVP）
 
 與 [ARCHITECTURE.md](./ARCHITECTURE.md) 一致。類型以 Postgres 為準。  
-2026-10-16 更新：報價維度（A）、來源標示（B）、包裝父子 SKU（C）。
+2026-10-16 更新：報價維度（A）、來源標示（B）、包裝父子 SKU（C）、容量分頁（D／family_id）。
 
 ## communities
 
@@ -13,21 +13,28 @@
 | is_active | boolean | MVP 僅一列 true |
 | created_at | timestamptz | |
 
-## products（父產品／產品族）
+## products（每一容量一列／獨立產品頁）
 
 | 欄位 | 類型 | 備註 |
 |------|------|------|
 | id | uuid PK | |
 | community_id | uuid FK → communities | |
+| family_id | uuid NULL | 同系列不同容量共用 |
 | sku_code | text | 社區內 UNIQUE |
-| name_zh | text | |
-| unit_label | text | 基準單位 |
+| name_zh | text | 含容量，例如「可口可樂 330ml」 |
+| capacity_value | numeric NULL | |
+| capacity_unit | text NULL | ml \| L \| g \| kg |
+| normalized_capacity | numeric NULL | 後端正規化至 ml 或 g |
+| unit_label | text | 基準單位（件） |
 | unit_qty_base | numeric | 預設 1 |
 | is_active | boolean | |
 | sort_order | int | |
 | created_at | timestamptz | |
 
-## product_variants（包裝子 SKU）
+標準單位價（每 100ml／100g）由報價 `unit_price_effective` + `normalized_capacity` 計算，可不存欄。  
+不同容量 = 不同頁；同容量包裝 = `product_variants`。
+
+## product_variants（同容量包裝子 SKU）
 
 | 欄位 | 類型 | 備註 |
 |------|------|------|
@@ -167,8 +174,10 @@
 ## 關係摘要
 
 - community 1 → N products / stores
-- product 1 → N product_variants（packaging）
+- products 以 `family_id` 組成系列（不同容量各一頁）
+- product 1 → N product_variants（**同容量** packaging）
 - product_variant + store (+ user) → quotes（含 source_type、維度欄位）
 - quote 1 → N votes / expired_reports
 - product／variant 1 → N ccs_prices（可選）
 - **比價只在同一 packaging_type 內**；勿混 single 與 case 折合價
+- **不同容量勿混同一頁 Tabs**；跨容量僅 family_id＋稍後推薦卡

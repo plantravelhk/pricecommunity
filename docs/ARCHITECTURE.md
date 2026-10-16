@@ -17,8 +17,8 @@
 
 ```
 communities (1)
-    └── products (N, 產品族 whitelist)
-            └── product_variants (N: single / multipack / case)
+    └── products (N, 每容量一列；同系列以 family_id 連結)
+            └── product_variants (N: 同容量 single / multipack / case)
     └── stores (N: district, sub_district, shop_type, optional lat/lng)
     └── users (N) ── quotes (N, 掛 variant + source_type) ── votes (N)
                                               └── expired_reports (N)
@@ -39,21 +39,26 @@ action_log ── 全表審計
 
 ### 2.2 `products`（父產品／產品族）
 
-同一產品族（例如可口可樂 330ml）用**一個父產品**；不同包裝見 `product_variants`。**禁止**把整箱折合單價與單件價直接混比。
+每一**容量**一列產品（例如可口可樂 330ml）；同容量的不同包裝見 `product_variants`。**禁止**把整箱折合單價與單件價直接混比。不同容量用 `family_id` 關聯，**各開獨立產品頁**（見 §2.14）。
 
 | 欄位 | 類型 | 說明 |
 |------|------|------|
 | id | uuid PK | |
 | community_id | uuid FK → communities | |
-| sku_code | text | 內部代號（產品族） |
-| name_zh | text | 產品名（繁中），例如「可口可樂 330ml」 |
+| family_id | uuid NULL | 同品牌／同系列不同容量共用；上線建議填 |
+| sku_code | text | 內部代號（**單一容量**一列） |
+| name_zh | text | 例如「可口可樂 330ml」— **每容量獨立產品頁** |
+| capacity_value | numeric NULL | 容量數值，例如 330、1.25 |
+| capacity_unit | text NULL | `ml` \| `L` \| `g` \| `kg` |
+| normalized_capacity | numeric NULL | 後端正規化至最小單位（ml 或 g） |
 | unit_label | text | 基準單位標籤，例如「罐」 |
 | unit_qty_base | numeric | 基準數量（計算單位價用），預設 1 |
 | is_active | bool | 下架則不可新報價 |
 | sort_order | int | |
 | created_at | timestamptz | |
 
-同一社區內 `sku_code` UNIQUE。
+同一社區內 `sku_code` UNIQUE。  
+**容量 ≠ 包裝捆綁**：不同容量 = 不同 `products` 列／不同頁；同容量多件裝 = `product_variants` Tabs（見 §2.13／§2.14）。
 
 ### 2.2b `product_variants`（包裝 SKU／子項）
 
@@ -235,6 +240,20 @@ CCS 作**顯示參考**，不自動覆寫用戶 `quotes`。
 | 上線優先 | ① multipack 總價 + 件數輸入 → 自動單位價並按 packaging 分類；② 再做 Tabs 分隔單件 vs 多件；③ 稍後：資料穩後用簡單規則提示「6罐裝折合更平」／「單買其實更平」 |
 | 範圍 | 上線只支援常見包裝類型（single / multipack / case） |
 
+### 2.14 容量處理（與捆綁分開）— 2026-10-16 定案
+
+同品牌／同系列的**不同容量**（例如可樂 330ml 罐、500ml 樽、1.25L；洗衣液 500ml／1L／2L）= **各自獨立產品頁**，**不是**同一頁上的 Tabs。
+
+| 要點 | 說明 |
+|------|------|
+| 頁面 | 每容量一頁；頁內顯示**售價** + **標準單位價**（每 100ml 或每 100g） |
+| 關聯 | 後端用 `family_id` 連結同一產品線；上線先有欄位即可 |
+| 標準單位價 | 由 `unit_price_effective`（每件）與 `normalized_capacity` 換算，例如每 100ml = `unit_price_effective / normalized_capacity * 100`（單位為 ml 時） |
+| 上線範圍 | 只做：**標準單位價顯示** + `family_id` 欄位 |
+| 稍後可選 | 「相關容量推薦」卡片：列出同 `family_id` 其他容量的標準單位價、標示邊個最平；**簡單規則**，不做複雜 matching |
+| 與捆綁共存 | **同容量** multipack／case → 子包裝 **Tabs**（§2.13）；**不同容量** → **分頁** + `family_id`。兩者可並存 |
+| 核心規則 | 與來源標示／投票／聲譽／過期**平行**，不改核心規則 |
+
 ## 3. 有效單位價公式
 
 設：
@@ -243,7 +262,7 @@ CCS 作**顯示參考**，不自動覆寫用戶 `quotes`。
 - `Q` = `related_qty`（主要件數）
 - `Q2` = `related_qty_2`（次要件數或加購價等，視類型）
 - `B` = `products.unit_qty_base`（通常 1）
-- 結果寫入 `unit_price_effective`，單位：港元／基準單位（單件）。若報價為 multipack／case：先以包裝總價代入折扣公式得「每包裝有效價」，再 ÷ `units_per_pack`。比較與排序**只在同一 `packaging_type`（同一 Tab）內**進行。
+- 結果寫入 `unit_price_effective`，單位：港元／基準單位（單件）。若報價為 multipack／case：先以包裝總價代入折扣公式得「每包裝有效價」，再 ÷ `units_per_pack`。比較與排序**只在同一 `packaging_type`（同一 Tab）內**進行。跨容量不混列表；標準單位價（每 100ml／100g）僅作頁內／推薦卡展示。
 
 ### 3.1 `discount_type` 枚舉
 
@@ -339,7 +358,7 @@ CCS（`ccs_official`）可用綠色 chip 置於「官方參考」或同一 Tab �
 
 ## 6. 前端顯示優先級
 
-產品詳情：**Tabs**（單件裝／排裝／整箱）— 每 Tab 只顯示該 `packaging_type` 的報價。篩選：`shop_type`、`packaging_type`（上線必做）。
+產品詳情：**一容量一頁**。頁內 **Tabs** 僅用於同容量包裝（單件裝／排裝／整箱）— 每 Tab 只顯示該 `packaging_type` 的報價。頁上同時顯示標準單位價（每 100ml／100g）。篩選：`shop_type`、`packaging_type`（上線必做）。「相關容量推薦」卡片**不上線日必做**。
 
 每則報價卡片／列：
 
@@ -352,7 +371,7 @@ CCS（`ccs_official`）可用綠色 chip 置於「官方參考」或同一 Tab �
 7. 店鋪名、district／商圈、確認／否決數
 8. 過期：灰階 +「已過期」；預設列表可隱藏
 
-列表頁：產品族名 → 各包裝最低有效價摘要（分列，勿混比）→ 進入詳情。  
+列表頁：各容量產品名 → 各包裝最低有效價摘要（分列，勿混比）→ 進入該容量詳情。  
 無強制圖；可選 emoji／佔位圖即可。掃碼 multipack → 對應 Tab。
 
 ## 7. 輔助能力路線（分階段）
@@ -384,6 +403,8 @@ Phase 1 程式碼尚未實作；實作時仍屬「輔助」，手動填表報價
 - 實時競價、庫存、下單支付
 - 自訂網域（MVP 用 `hkcompare.netlify.app`）
 - 跨 packaging 直接比價（整箱折合 vs 單件混排）
+- 把不同容量塞進同一產品頁 Tabs（容量必須分頁；family_id 只做關聯／稍後推薦）
+- 上線日複雜跨容量 matching／推薦引擎
 - 上線日藍（爬蟲網店）／紫紅（商戶）來源標示（欄位可先有，UI 稍後開）
 
 ## 9. 設定常數（建議集中 config）
@@ -398,6 +419,7 @@ VALIDITY_DAYS_SUPERMARKET=7
 VALIDITY_HOURS_PHARMACY_OR_NEAR_EXPIRY=24..48
 LAUNCH_SOURCE_TYPES=ccs_official,community_verified
 LAUNCH_SHOP_TYPES=chain_supermarket,local_pharmacy
+STANDARD_UNIT_BASIS=100  # per 100ml or 100g display
 ```
 
 ---
