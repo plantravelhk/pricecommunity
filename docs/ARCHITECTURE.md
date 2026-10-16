@@ -17,11 +17,12 @@
 
 ```
 communities (1)
-    └── products (N, whitelist)
-    └── stores (N)
-    └── users (N) ── quotes (N) ── votes (N)
-                              └── expired_reports (N)
-ccs_prices ── 對應 product (+ 可選 store/地區)
+    └── products (N, 產品族 whitelist)
+            └── product_variants (N: single / multipack / case)
+    └── stores (N: district, sub_district, shop_type, optional lat/lng)
+    └── users (N) ── quotes (N, 掛 variant + source_type) ── votes (N)
+                                              └── expired_reports (N)
+ccs_prices ── 對應 product / variant (+ 可選 store/地區)
 rate_limits ── 綁 user / IP / action
 action_log ── 全表審計
 ```
@@ -36,21 +37,38 @@ action_log ── 全表審計
 | is_active | bool | MVP 僅一列 `true` |
 | created_at | timestamptz | |
 
-### 2.2 `products`
+### 2.2 `products`（父產品／產品族）
+
+同一產品族（例如可口可樂 330ml）用**一個父產品**；不同包裝見 `product_variants`。**禁止**把整箱折合單價與單件價直接混比。
 
 | 欄位 | 類型 | 說明 |
 |------|------|------|
 | id | uuid PK | |
 | community_id | uuid FK → communities | |
-| sku_code | text | 內部代號 |
-| name_zh | text | 產品名（繁中） |
-| unit_label | text | 例如「支」「包」「100g」 |
+| sku_code | text | 內部代號（產品族） |
+| name_zh | text | 產品名（繁中），例如「可口可樂 330ml」 |
+| unit_label | text | 基準單位標籤，例如「罐」 |
 | unit_qty_base | numeric | 基準數量（計算單位價用），預設 1 |
 | is_active | bool | 下架則不可新報價 |
 | sort_order | int | |
 | created_at | timestamptz | |
 
 同一社區內 `sku_code` UNIQUE。
+
+### 2.2b `product_variants`（包裝 SKU／子項）
+
+| 欄位 | 類型 | 說明 |
+|------|------|------|
+| id | uuid PK | |
+| product_id | uuid FK → products | 父產品 |
+| packaging_type | text | `single` \| `multipack` \| `case`（單件裝／排裝／整箱） |
+| units_per_pack | int | 每包／每箱件數；`single`=1 |
+| barcode | text NULL | 可選；掃碼對應 Tab |
+| name_zh | text NULL | 可選覆寫顯示名 |
+| is_active | bool | |
+| created_at | timestamptz | |
+
+同一 `product_id` 下 `(packaging_type, units_per_pack)` 宜 UNIQUE。報價掛在 **variant**，不是只掛父產品。
 
 ### 2.3 `stores`
 
@@ -60,6 +78,11 @@ action_log ── 全表審計
 | community_id | uuid FK | |
 | name_zh | text | 店鋪名 |
 | chain_code | text NULL | 可選連鎖代號 |
+| district | text NULL | 香港 18 區（上線可必填於報價表單） |
+| sub_district | text NULL | 商圈，例如「沙田市中心」「大圍」 |
+| shop_type | text | 見 §2.11；上線優先：`chain_supermarket`、`local_pharmacy` |
+| lat | numeric NULL | 可選 GPS；上線日不要求 |
+| lng | numeric NULL | 可選 GPS；上線日不要求 |
 | is_active | bool | |
 | created_at | timestamptz | |
 
@@ -82,15 +105,23 @@ action_log ── 全表審計
 |------|------|------|
 | id | uuid PK | |
 | community_id | uuid FK | |
-| product_id | uuid FK | |
+| product_id | uuid FK | 父產品（冗餘，方便查詢） |
+| product_variant_id | uuid FK → product_variants | **必填**；決定包裝維度 |
 | store_id | uuid FK | |
-| user_id | uuid FK | 報價者 |
-| original_price | numeric(12,2) | 標價／原價（港元） |
+| user_id | uuid FK NULL | 街坊報價者；CCS／爬蟲／商戶來源可 NULL |
+| original_price | numeric(12,2) | 該包裝**總價**（港元）；單件即單價 |
 | discount_type | text | 見 §3 枚舉 |
 | related_qty | numeric | 折扣相關件數（如買 X） |
 | related_qty_2 | numeric NULL | 第二參數（如送 Y、加購價） |
-| valid_until | date | 優惠／價格有效至 |
-| unit_price_effective | numeric(12,4) | **系統計算**，不可由客戶端覆寫 |
+| packaging_type | text | 冗餘自 variant：`single` \| `multipack` \| `case` |
+| price_type | text NULL | `shelf_normal` \| `near_expiry_clearance` \| `checkout_redeem`；上線可空 |
+| district | text NULL | 可冗餘自 store；上線篩選用 |
+| sub_district | text NULL | 商圈 |
+| shop_type | text NULL | 可冗餘自 store |
+| source_type | text | 見 §2.12；上線優先 `ccs_official` + `community_verified` |
+| reported_at | timestamptz | 報價／觀測時間 |
+| valid_until | date | 有效至；可由 `reported_at` + 預設窗推算 |
+| unit_price_effective | numeric(12,4) | **系統計算**＝總價÷件數等，不可由客戶端覆寫 |
 | status | text | `pending` / `published` / `hidden` / `expired` |
 | confirm_count | int | 預設 0 |
 | reject_count | int | 預設 0 |
@@ -98,6 +129,8 @@ action_log ── 全表審計
 | published_at | timestamptz NULL | |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
+
+上線日：**必填**精簡為 product_variant、store（或 district+shop_type）、original_price、source_type、reported_at、packaging 相關；其餘可 NULL。
 
 ### 2.6 `votes`
 
@@ -164,6 +197,44 @@ action_log ── 全表審計
 
 CCS 作**顯示參考**，不自動覆寫用戶 `quotes`。
 
+### 2.11 報價維度分類（精簡版）— 2026-10-16 定案
+
+與投票／聲譽／過期**平行**，**不改**核心規則引擎。
+
+| 維度 | 欄位 | 說明 |
+|------|------|------|
+| 空間／地理 | `district` + `sub_district` | 香港 **18 區** + 商圈（如沙田市中心、大圍）。可選 GPS `lat`/`lng`（掛 `stores`）上線日不要求 |
+| 店鋪屬性 | `shop_type` | `chain_supermarket` \| `health_beauty_convenience` \| `local_pharmacy` \| `lifestyle_bargain` \| `wet_market_frozen`。**上線優先**：連鎖超市 + 街坊藥房 |
+| 包裝／售賣 | `packaging_type` + 可選 `price_type` | 包裝：`single` \| `multipack` \| `case`。售價類型：`shelf_normal` \| `near_expiry_clearance` \| `checkout_redeem`。**永不**把整箱折合價與單件價直接比較 |
+| 時間 | `reported_at` + `valid_until` | 預設有效窗：超市約 **7 日**；藥房／臨期 **24–48 小時**。到期後沿用現有灰顯／隱藏 |
+
+篩選 UI 上線先做：**shop_type** + **packaging_type**。其餘欄位可 NULL，逐步收緊。
+
+### 2.12 價格來源視覺標示 — 2026-10-16 定案
+
+每則報價必有 `source_type`。前端用**色塊 chip + 固定文案**（與投票／聲譽／過期平行，不改核心規則）。
+
+| source_type | 色 | 固定文案 |
+|-------------|----|----------|
+| `ccs_official` | **綠** | 「官方價，穩陣可信賴」 |
+| `crawler_mall` | **藍** | 「網店價，有參考價值」（例：HKTVmall 自建爬蟲） |
+| `community_verified` | **橙／黃** | 「街坊報價（X人已證實），現場實時價，可能好平，但去到要睇運氣」；X = `confirm_count` |
+| `merchant` | **紫／紅** | 「店家提供特價，可能有限量或附帶條件」 |
+
+**上線優先**：只做 **綠（CCS）** + **橙／黃（街坊已證實）**。藍、紫稍後再開。
+
+### 2.13 包裝與捆綁銷售 — 2026-10-16 定案
+
+同一產品族（例如可口可樂 330ml）**不得**把整箱單位價與單罐價放在同一比較列。
+
+| 層 | 作法 |
+|----|------|
+| 資料 | 父產品 = 產品族；子包裝 SKU = `product_variants`（`packaging_type`、`units_per_pack`、可選 `barcode`）。報價存**包裝總價** `original_price`；後端按件數算 `unit_price_effective` |
+| 顯示 | 產品頁 **Tabs**：單件裝／排裝／整箱 — 每 Tab **只**顯示該包裝的報價與單位價 |
+| 掃碼 | 掃到 multipack／case 條碼 → 打開對應 Tab |
+| 上線優先 | ① multipack 總價 + 件數輸入 → 自動單位價並按 packaging 分類；② 再做 Tabs 分隔單件 vs 多件；③ 稍後：資料穩後用簡單規則提示「6罐裝折合更平」／「單買其實更平」 |
+| 範圍 | 上線只支援常見包裝類型（single / multipack / case） |
+
 ## 3. 有效單位價公式
 
 設：
@@ -172,7 +243,7 @@ CCS 作**顯示參考**，不自動覆寫用戶 `quotes`。
 - `Q` = `related_qty`（主要件數）
 - `Q2` = `related_qty_2`（次要件數或加購價等，視類型）
 - `B` = `products.unit_qty_base`（通常 1）
-- 結果寫入 `unit_price_effective`，單位：港元／基準單位
+- 結果寫入 `unit_price_effective`，單位：港元／基準單位（單件）。若報價為 multipack／case：先以包裝總價代入折扣公式得「每包裝有效價」，再 ÷ `units_per_pack`。比較與排序**只在同一 `packaging_type`（同一 Tab）內**進行。
 
 ### 3.1 `discount_type` 枚舉
 
@@ -216,8 +287,9 @@ CCS 作**顯示參考**，不自動覆寫用戶 `quotes`。
 ### 4.3 過期
 
 1. **時間**：`valid_until < today` → 自動 `expired`（排程或讀時惰性更新）
-2. **舉報**：`expired_reports` 達門檻（建議 2）→ `expired`
-3. 前端：過期項**灰顯或隱藏**（設定開關；MVP 預設灰顯於「含過期」篩選，預設列表隱藏）
+2. **預設有效窗**（可由 `reported_at` 推算 `valid_until`，用戶可覆寫）：超市／一般貨架 ≈ **7 日**；藥房或 `near_expiry_clearance` ≈ **24–48 小時**
+3. **舉報**：`expired_reports` 達門檻（建議 2）→ `expired`
+4. 前端：過期項**灰顯或隱藏**（設定開關；MVP 預設灰顯於「含過期」篩選，預設列表隱藏）
 
 ### 4.4 無廣告視窗
 
@@ -237,13 +309,15 @@ CCS 作**顯示參考**，不自動覆寫用戶 `quotes`。
 
 ### 4.6 排序（產品詳情／列表）
 
+排序與比價**限定在同一 packaging Tab**（同一 `packaging_type`）內：
+
 1. `status = published` 且未過期優先  
-2. 報價者 `reputation` 高 → 前  
+2. 報價者 `reputation` 高 → 前（街坊來源）  
 3. `unit_price_effective` 低 → 前（同聲譽帶）  
 4. `confirm_count` 高 → 前  
-5. `created_at` 新 → 前  
+5. `reported_at`／`created_at` 新 → 前  
 
-CCS 參考價可並排顯示，不插入 `quotes` 排序陣列（或置頂「官方參考」區塊）。
+CCS（`ccs_official`）可用綠色 chip 置於「官方參考」或同一 Tab 列表；**不**與其他 packaging 混排。
 
 ## 5. 基本 API Surface
 
@@ -252,10 +326,10 @@ CCS 參考價可並排顯示，不插入 `quotes` 排序陣列（或置頂「官
 | Method | Path | 說明 |
 |--------|------|------|
 | GET | /products | 社區內白名單產品 |
-| GET | /products/:id/quotes | 該產品報價列表（支援 status、sort） |
+| GET | /products/:id/quotes | 該產品報價列表（支援 status、sort、packaging_type、shop_type、source_type） |
 | GET | /stores | 店鋪列表 |
 | GET | /ccs/:productId | CCS 參考價 |
-| POST | /quotes | 建立報價；伺服器算 `unit_price_effective` |
+| POST | /quotes | 建立報價（含 variant／packaging、source_type）；伺服器算 `unit_price_effective` |
 | POST | /quotes/:id/votes | `{ vote_type: confirm\|reject }` |
 | POST | /quotes/:id/expired-report | 舉報過期 |
 | GET | /me | 自己的 reputation、ads_off_until |
@@ -265,18 +339,21 @@ CCS 參考價可並排顯示，不插入 `quotes` 排序陣列（或置頂「官
 
 ## 6. 前端顯示優先級
 
+產品詳情：**Tabs**（單件裝／排裝／整箱）— 每 Tab 只顯示該 `packaging_type` 的報價。篩選：`shop_type`、`packaging_type`（上線必做）。
+
 每則報價卡片／列：
 
-1. **有效單位價**（最大、最醒目）
-2. 原價 `original_price`
-3. 折扣條款（人類可讀：由 `discount_type` + qty 組句）
-4. **需買滿 X 件**（若 X > 1）
-5. 有效期 `valid_until`
-6. 店鋪名、確認／否決數
-7. 過期：灰階 +「已過期」；預設列表可隱藏
+1. **來源色塊 chip** + 固定文案（見 §2.12；上線先綠 + 橙／黃）
+2. **有效單位價**（最大、最醒目；僅相對同 Tab）
+3. 包裝總價 `original_price` + 件數（multipack／case）
+4. 折扣條款（人類可讀：由 `discount_type` + qty 組句）
+5. **需買滿 X 件**（若 X > 1）
+6. 有效期 `valid_until`／`reported_at`
+7. 店鋪名、district／商圈、確認／否決數
+8. 過期：灰階 +「已過期」；預設列表可隱藏
 
-列表頁：產品名 → 最低有效價摘要 → 進入詳情。  
-無強制圖；可選 emoji／佔位圖即可。
+列表頁：產品族名 → 各包裝最低有效價摘要（分列，勿混比）→ 進入詳情。  
+無強制圖；可選 emoji／佔位圖即可。掃碼 multipack → 對應 Tab。
 
 ## 7. 輔助能力路線（分階段）
 
@@ -306,6 +383,8 @@ Phase 1 程式碼尚未實作；實作時仍屬「輔助」，手動填表報價
 - 複雜促銷引擎（只支援上表枚舉；不足時才考慮 Phase 3）
 - 實時競價、庫存、下單支付
 - 自訂網域（MVP 用 `hkcompare.netlify.app`）
+- 跨 packaging 直接比價（整箱折合 vs 單件混排）
+- 上線日藍（爬蟲網店）／紫紅（商戶）來源標示（欄位可先有，UI 稍後開）
 
 ## 9. 設定常數（建議集中 config）
 
@@ -315,6 +394,10 @@ ADS_OFF_DAYS=7
 EXPIRED_REPORT_THRESHOLD=2
 RATE_QUOTE_PER_HOUR=10
 PUBLISH_THRESHOLDS=...（見 §4.2）
+VALIDITY_DAYS_SUPERMARKET=7
+VALIDITY_HOURS_PHARMACY_OR_NEAR_EXPIRY=24..48
+LAUNCH_SOURCE_TYPES=ccs_official,community_verified
+LAUNCH_SHOP_TYPES=chain_supermarket,local_pharmacy
 ```
 
 ---

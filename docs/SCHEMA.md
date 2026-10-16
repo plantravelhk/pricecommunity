@@ -1,6 +1,7 @@
 # Schema 速查（MVP）
 
-與 [ARCHITECTURE.md](./ARCHITECTURE.md) 一致。類型以 Postgres 為準。
+與 [ARCHITECTURE.md](./ARCHITECTURE.md) 一致。類型以 Postgres 為準。  
+2026-10-16 更新：報價維度（A）、來源標示（B）、包裝父子 SKU（C）。
 
 ## communities
 
@@ -12,7 +13,7 @@
 | is_active | boolean | MVP 僅一列 true |
 | created_at | timestamptz | |
 
-## products
+## products（父產品／產品族）
 
 | 欄位 | 類型 | 備註 |
 |------|------|------|
@@ -20,11 +21,25 @@
 | community_id | uuid FK → communities | |
 | sku_code | text | 社區內 UNIQUE |
 | name_zh | text | |
-| unit_label | text | |
+| unit_label | text | 基準單位 |
 | unit_qty_base | numeric | 預設 1 |
 | is_active | boolean | |
 | sort_order | int | |
 | created_at | timestamptz | |
+
+## product_variants（包裝子 SKU）
+
+| 欄位 | 類型 | 備註 |
+|------|------|------|
+| id | uuid PK | |
+| product_id | uuid FK → products | |
+| packaging_type | text | single \| multipack \| case |
+| units_per_pack | int | single=1 |
+| barcode | text NULL | 可選 |
+| name_zh | text NULL | |
+| is_active | boolean | |
+| created_at | timestamptz | |
+| | UNIQUE(product_id, packaging_type, units_per_pack) 建議 | |
 
 ## stores
 
@@ -34,6 +49,11 @@
 | community_id | uuid FK → communities | |
 | name_zh | text | |
 | chain_code | text NULL | |
+| district | text NULL | 香港 18 區 |
+| sub_district | text NULL | 商圈 |
+| shop_type | text | chain_supermarket \| health_beauty_convenience \| local_pharmacy \| lifestyle_bargain \| wet_market_frozen |
+| lat | numeric NULL | 上線不要求 |
+| lng | numeric NULL | 上線不要求 |
 | is_active | boolean | |
 | created_at | timestamptz | |
 
@@ -56,15 +76,23 @@
 |------|------|------|
 | id | uuid PK | |
 | community_id | uuid FK | |
-| product_id | uuid FK | |
+| product_id | uuid FK → products | 父產品（冗餘） |
+| product_variant_id | uuid FK → product_variants | 必填 |
 | store_id | uuid FK | |
-| user_id | uuid FK | |
-| original_price | numeric(12,2) | |
+| user_id | uuid FK NULL | CCS／爬蟲／商戶可空 |
+| original_price | numeric(12,2) | 包裝總價 |
 | discount_type | text | none / buy_x_get_y / second_half / pay_more_get_one / buy_x_for_price / percent_off / amount_off |
 | related_qty | numeric | |
 | related_qty_2 | numeric NULL | |
+| packaging_type | text | single \| multipack \| case（冗餘） |
+| price_type | text NULL | shelf_normal \| near_expiry_clearance \| checkout_redeem |
+| district | text NULL | |
+| sub_district | text NULL | |
+| shop_type | text NULL | |
+| source_type | text | ccs_official \| crawler_mall \| community_verified \| merchant |
+| reported_at | timestamptz | |
 | valid_until | date | |
-| unit_price_effective | numeric(12,4) | 伺服器計算 |
+| unit_price_effective | numeric(12,4) | 伺服器計算（總價÷件數等） |
 | status | text | pending / published / hidden / expired |
 | confirm_count | int | 預設 0 |
 | reject_count | int | 預設 0 |
@@ -72,6 +100,9 @@
 | published_at | timestamptz NULL | |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
+
+上線必填精簡：variant、store（或 district+shop_type）、original_price、source_type、reported_at、packaging；其餘可 NULL。  
+上線來源 UI：`ccs_official` + `community_verified`。上線 shop_type 優先：`chain_supermarket` + `local_pharmacy`。
 
 ## votes
 
@@ -123,6 +154,7 @@
 |------|------|------|
 | id | uuid PK | |
 | product_id | uuid FK NULL → products | |
+| product_variant_id | uuid FK NULL → product_variants | 可選對包裝 |
 | ccs_item_name | text | |
 | store_name | text NULL | |
 | price | numeric(12,2) | |
@@ -134,7 +166,9 @@
 
 ## 關係摘要
 
-- community 1 → N products / stores / users（users 可選綁定 community）
-- product + store + user → quotes
+- community 1 → N products / stores
+- product 1 → N product_variants（packaging）
+- product_variant + store (+ user) → quotes（含 source_type、維度欄位）
 - quote 1 → N votes / expired_reports
-- product 1 → N ccs_prices（可選對應）
+- product／variant 1 → N ccs_prices（可選）
+- **比價只在同一 packaging_type 內**；勿混 single 與 case 折合價
