@@ -21,10 +21,11 @@
 | 包裝捆綁（C） | ✅ 2026-10-16：同容量 product_variants；Tabs 分包裝；禁止整箱折合 vs 單件混比 |
 | 容量分頁（D） | ✅ 2026-10-16：不同容量=獨立產品頁 + family_id；推薦卡稍後 |
 | 標準單位價（E） | ✅ 2026-10-16：normalized 存 ml／g；前端 (售價/norm)×multiplier；上線 100ml／100g；主價+灰字 |
-| 應用程式碼 | ❌ 無 |
+| 應用程式碼 | ❌ 無（僅 `public/index.html` noindex placeholder） |
 | 資料庫 / Schema SQL | ❌ 未建 |
-| Netlify site | ❌ 未建立 |
-| 計劃 URL | `https://hkcompare.netlify.app`（子網域；無自訂網域） |
+| Netlify site | ✅ 已建（2026-10-16）— 見下表 |
+| 目前 URL | https://hkcompare-2buz.netlify.app |
+| 原望 URL | `hkcompare.netlify.app` **已被佔用**（非本隊） |
 | GitHub repo | https://github.com/plantravelhk/hkcompare |
 | 品牌 / Bot 名 | 香港比較網 |
 | 認證帳號推送 | `plantravelhk` via `gh` |
@@ -47,7 +48,7 @@
 
 1. **選定第一個社區**（slug + name_zh）
 2. **鎖定約 30 個白名單產品**（名、單位、unit_qty_base）
-3. **建立 Netlify site**，確認 subdomain `hkcompare` 可用；綁定 repo 或手動 deploy（需用戶 OK）
+3. ~~建立 Netlify site~~ → 已用臨時名 `hkcompare-2buz`；**改名／換子網域仍待辦**（`hkcompare.netlify.app` 已被他人硬件站佔用）
 4. **撰寫並套用 Schema SQL**（Postgres／Supabase migration）
 5. **實作 API**（quotes、votes、expired-report、products、CCS 讀取、rate limit、聲譽規則）
 6. **實作 Frontend**（列表、報價表單、投票、有效價／需買滿 X 件、過期灰顯、ads SDK flag、來源 chip、包裝 Tabs、shop_type+packaging 篩選）
@@ -69,4 +70,5 @@
 - 工作目錄：`/workspace/hkcompare/`
 - 勿擴大範圍至社交／個人主頁／強制上傳圖；上線日勿實作 Phase 2／3；Phase 1 OCR 為可選輔助且尚未開工
 - 實作時遵守 A+B+C+D+E：勿跨 packaging 混比；不同容量分頁；標準單位價勿跨量綱排名；上線來源只綠+橙／黃；與核心規則平行
+- Netlify：用 `hkcompare-2buz`／site id 上述；**不要**當成已擁有 hkcompare.netlify.app
 - 更新本檔「目前狀態」與「開放項目」後再結束回合

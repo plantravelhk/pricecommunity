@@ -5,8 +5,9 @@
 | 項目 | 內容 |
 |------|------|
 | 品牌 | 香港比較網 / hkcompare |
-| 計劃網址 | https://hkcompare.netlify.app （Netlify 子網域；暫無自訂網域） |
-| 狀態 | **架構文件階段** — 尚未寫應用程式碼、尚未建立 Netlify site |
+| 目前 URL | https://hkcompare-2buz.netlify.app （臨時子網域；**仍須改名**） |
+| 原望 URL | hkcompare.netlify.app — **已被佔用**（他人 DIY 硬件站「HKCompare · 香港硬件價錢比較」，非本專案） |
+| 狀態 | 架構文件 + Netlify placeholder；**尚未寫應用程式碼** |
 | 架構詳情 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Schema | [docs/SCHEMA.md](docs/SCHEMA.md) |
 | 交接 | [docs/HANDOFF.md](docs/HANDOFF.md) |
