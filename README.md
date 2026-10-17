@@ -1,10 +1,10 @@
-# 香港比較網 / hkcompare
+# 香港比較網 / pricecommunity
 
 **極簡 MVP：香港社區物價比較（報價 + 投票）**
 
 | 項目 | 內容 |
 |------|------|
-| 品牌 | 香港比較網 / hkcompare |
+| 品牌 | 香港比較網 / pricecommunity |
 | 目前 URL | https://pricecommunity.netlify.app （Netlify 名 `pricecommunity`；暫無自訂網域） |
 | 原望 URL | hkcompare.netlify.app — **仍被佔用**（他人 DIY 硬件站「HKCompare · 香港硬件價錢比較」，非本專案） |
 | 狀態 | 架構文件 + Netlify placeholder（noindex）；**尚未寫應用程式碼** |
