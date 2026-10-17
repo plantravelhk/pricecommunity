@@ -1,4 +1,4 @@
-# HANDOFF — 香港比較網 / hkcompare
+# HANDOFF — 香港比較網 / pricecommunity
 
 ## AI 交接守則（必讀）
 
@@ -81,7 +81,7 @@
 
 - 先讀：`TODO.md` → `docs/ARCHITECTURE.md` → `docs/SCHEMA.md`
 - 預設分支：`main`
-- 工作目錄：`/workspace/hkcompare/`
+- 工作目錄：`/workspace/pricecommunity/`
 - 勿擴大範圍至社交／個人主頁／強制上傳圖；上線日勿實作 Phase 2／3；Phase 1 OCR 為可選輔助且尚未開工
 - 實作時遵守 A+B+C+D+E：勿跨 packaging 混比；不同容量分頁；標準單位價勿跨量綱排名；上線來源只綠+橙／黃；與核心規則平行
 - Netlify：正式子網域 **https://pricecommunity.netlify.app**（site id `a2a9c1f5-a3e3-4e6f-afbd-3606faa87862`）；**不要**當成已擁有 hkcompare.netlify.app
