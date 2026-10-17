@@ -26,7 +26,7 @@
 | Netlify site | ✅ 已建並改名（2026-10-16）— 見下表 |
 | 目前 URL | https://pricecommunity.netlify.app |
 | 原望 URL | `hkcompare.netlify.app` **仍被佔用**（非本隊） |
-| GitHub repo | https://github.com/plantravelhk/hkcompare |
+| GitHub repo | https://github.com/plantravelhk/pricecommunity |
 | 品牌 / Bot 名 | 香港比較網 |
 | 認證帳號推送 | `plantravelhk` via `gh` |
 
