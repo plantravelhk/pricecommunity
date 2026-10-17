@@ -7,6 +7,7 @@
 3. 每次有意義進度後，**更新本 HANDOFF 與根目錄 TODO.md**，並推上 GitHub。
 4. 發現做不完或受阻項目，**明確列出**（誰阻、差什麼），勿默默跳過。
 5. 架構階段**不要**擅自寫應用程式碼或建立 Netlify production site，除非任務明確要求。
+6. **標注／說明**：預設**唔加**額外標注、註解或說明。若認為需要標注或說明：**先問用戶**，得同意先加。用戶已特別吩咐或註明例外則可直接加。（skill：AI 交接守則／sand-workflow:ai）
 
 ---
 
@@ -27,7 +28,7 @@
 | 目前 URL | https://pricecommunity.netlify.app |
 | 原望 URL | `hkcompare.netlify.app` **仍被佔用**（非本隊） |
 | GitHub repo | https://github.com/plantravelhk/pricecommunity |
-| 品牌 / Bot 名 | 香港比較網 |
+| 品牌 / Bot 名 | 社會比價 |
 | 認證帳號推送 | `plantravelhk` via `gh` |
 
 **Netlify site（2026-10-16；已改名）**：
