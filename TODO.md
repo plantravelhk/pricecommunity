@@ -19,6 +19,7 @@
 - [ ] CCS 格價資訊通資料匯入與產品對應
 - [ ] Auth 接線
 - [ ] Preview 驗證；**經用戶同意**後再上 production
+- [ ] **Deploy／SEO（守則）**：Preview 必須 noindex；禁止 publish preview-branch 做正式主網；`--prod` 前 unset `PREVIEW_NOINDEX`；上線後 curl 核實正式無全站 `X-Robots-Tag: noindex`（見 HANDOFF §8）
 - [ ] 每次進度更新 HANDOFF.md + 本檔並 push
 
 ## 近期待選／MVP 核心之後（可選）

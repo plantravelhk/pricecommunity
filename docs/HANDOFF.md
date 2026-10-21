@@ -9,6 +9,12 @@
 5. 架構階段**不要**擅自寫應用程式碼或建立 Netlify production site，除非任務明確要求。
 6. **標注／說明**：預設**唔加**額外標注、註解或說明。若認為需要標注或說明：**先問用戶**，得同意先加。用戶已特別吩咐或註明例外則可直接加。若同更高優先要求衝突（例如 google-seo 必做嘅 meta／title／H1／FAQ），標注守則**讓路**，該等必做項照做、可簡化標注守則。（skill：AI 交接守則／sand-workflow:ai）
 7. **語言（2026-10-18）**：**粵語唔再係必須語言**；唔當成必做 locale。本站以香港／本地受眾為主時，沿用項目已定語言（例如香港正體／書面繁體、簡體、英文等）；唔強制另做粵語版。
+8. **Preview noindex／正式 publish（2026-10-21，全站適用）**：
+   - Preview **必須** noindex（meta robots 及／或 `PREVIEW_NOINDEX`／等價機制）。
+   - **禁止**將 preview-branch／帶 PREVIEW_NOINDEX 嘅 build **publish 做正式主網**。
+   - 執行 `--prod` **之前**必須 unset `PREVIEW_NOINDEX`（或等價開關）。
+   - 上線後用 curl（或等價）核實正式站**無**全站 `X-Robots-Tag: noindex`。
+   - 事故參考：travel.planlo.net 曾短暫以 preview deploy 當正式並帶 noindex。
 
 ---
 
